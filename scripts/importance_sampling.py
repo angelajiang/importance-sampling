@@ -35,7 +35,8 @@ from importance_sampling.samplers import ModelSampler, UniformSampler, \
     AdditiveSmoothingSampler, AdaptiveAdditiveSmoothingSampler, \
     PowerSmoothingSampler, OnlineBatchSelectionSampler, HistorySampler, \
     CacheSampler, ConditionalStartSampler, WarmupCondition, ExpCondition, \
-    TotalVariationCondition, VarianceReductionCondition, SCSGSampler
+    TotalVariationCondition, VarianceReductionCondition, SCSGSampler, \
+    DynamicSampler
 from importance_sampling.utils import tf_config
 from importance_sampling.utils.functional import compose, partial, ___
 
@@ -308,6 +309,13 @@ def get_samplers_dictionary(model, hyperparams={}, reweighting=None):
         "uniform": partial(UniformSampler, ___, reweighting),
         "model": partial(
             ModelSampler,
+            ___,
+            reweighting,
+            model,
+            large_batch=hyperparams.get("presample", 1024)
+        ),
+        "dynamic": partial(
+            DynamicSampler,
             ___,
             reweighting,
             model,

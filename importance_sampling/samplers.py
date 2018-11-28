@@ -89,6 +89,61 @@ class BaseSampler(object):
         pass
 
 
+class DynamicSampler(BaseSampler):
+    """DynamicSampler uses a model to score the samples.
+    """
+    def __init__(self, dataset, reweighting, model, large_batch=None,
+                 forward_batch_size=128):
+        self.model = model
+        self.large_batch = large_batch
+        self.forward_batch_size = forward_batch_size
+        self.N = _get_dataset_length(dataset, default=1)
+        self.current_idx = 0
+
+        super(DynamicSampler, self).__init__(dataset, reweighting)
+
+    def _get_samples_with_scores(self, batch_size):
+        assert batch_size < self.large_batch
+
+        # Sample a large number of points in random and score them
+        idxs = np.asarray(range(self.current_idx,
+                                self.current_idx + batch_size))
+        idxs = np.asarray([idx % len(self.dataset.train_data) for idx in idxs])
+        print("_get_samples_with_scores", len(idxs))
+        x, y = self.dataset.train_data[idxs]
+        #scores = self.model.score(x, y, batch_size=self.forward_batch_size)
+
+        self.current_idx += len(idxs)
+
+        return (
+            idxs,
+            None,
+            (x, y)
+        )
+
+    def sample(self, batch_size):
+        # Get the importance scores of some samples
+        idxs1, scores, xy = self._get_samples_with_scores(batch_size)
+
+        # Sample from the available ones
+        #p = scores / scores.sum() if scores is not None else None
+        #idxs2 = np.random.choice(len(idxs1), batch_size, p=p)
+        idxs2 = np.asarray(range(len(idxs1)))
+        w = self.reweighting.sample_weights(idxs2, scores)
+
+        # Make sure we have the data
+        if xy is None:
+            xy = self.dataset.train_data[idxs1[idxs2]]
+        else:
+            x, y = xy
+            xy = self._slice_data(x, y, idxs2)
+
+        scores = scores[idxs2] if scores is not None else np.ones(batch_size)
+        self._send_messages(idxs1[idxs2], xy, w, scores)
+        return idxs1[idxs2], xy, w
+
+
+
 class UniformSampler(BaseSampler):
     """UniformSampler is the simplest possible sampler which samples the
     dataset uniformly."""
