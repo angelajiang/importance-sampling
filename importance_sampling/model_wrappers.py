@@ -15,6 +15,7 @@ import numpy as np
 from .layers import GradientNormLayer, LossLayer, MetricLayer
 from .reweighting import UNBIASED
 from .utils.functional import compose
+from .utils.sb_utils import euclidean_distance_loss
 
 
 def _tolist(x, acceptable_iterables=(list, tuple)):
@@ -201,11 +202,7 @@ class SBWrapper(ModelWrapper):
     def _augment_model(self, model, score, reweighting):
 
         # Extract some info from the model
-
-	def euclidean_distance_loss(y_true, y_pred):
-            return K.sqrt(K.sum(K.square(y_pred - y_true), axis=-1))
-
-        loss = euclidean_distance_loss
+        loss = model.loss
 
         optimizer = model.optimizer.__class__(**model.optimizer.get_config())
         output_shape = model.get_output_shape_at(0)[1:]
@@ -228,7 +225,7 @@ class SBWrapper(ModelWrapper):
             score,
             y_true,
             model.get_output_at(0),
-            loss,
+            euclidean_distance_loss,
             self.layer,
             model
         )
