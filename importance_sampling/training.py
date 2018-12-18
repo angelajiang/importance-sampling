@@ -534,6 +534,39 @@ class ApproximateImportanceTraining(_BaseImportanceTraining):
         raise NotImplementedError("ApproximateImportanceTraining doesn't "
                                   "support generator training")
 
+class SB(_BaseImportanceTraining):
+    """Train a model with Selective-Backprop.
+
+    Arguments
+    ---------
+        model: The Keras model to train
+        Sampling probability minimum: float
+    """
+    def __init__(self, model, sampling_min=0):
+        self._sampling_min = sampling_min
+
+        self.original_model = model
+        self.model = SBWrapper(model)
+
+    @property
+    def reweighting(self):
+        """SVRG does not currently use reweighting so return
+        NoReweightingPolicy()"""
+        return NoReweightingPolicy()
+
+    def sampler(self, dataset, batch_size, steps_per_epoch, epochs):
+        """Create the SB sampler"""
+        B = int(self._B * batch_size)
+
+    def __init__(self, dataset, reweighting, model, large_batch=None,
+                 forward_batch_size=128):
+
+        return SBSampler(
+            dataset,
+            self.reweighting,
+            self.model
+        )
+
 
 class SVRG(_BaseImportanceTraining):
     """Train a model with Stochastic Variance Reduced Gradient descent.

@@ -28,7 +28,7 @@ from importance_sampling.datasets import CIFAR10, CIFAR100, CIFARSanityCheck, \
     CASIAWebFace2, PixelByPixelMNIST
 from importance_sampling.reweighting import AdjustedBiasedReweightingPolicy, \
     BiasedReweightingPolicy, NoReweightingPolicy, CorrectingReweightingPolicy
-from importance_sampling.model_wrappers import OracleWrapper, SVRGWrapper, \
+from importance_sampling.model_wrappers import OracleWrapper, SBWrapper, SVRGWrapper, \
     KatyushaWrapper
 from importance_sampling.samplers import ModelSampler, UniformSampler, \
     LSTMSampler, PerClassGaussian, LSTMComparisonSampler, \
@@ -36,7 +36,7 @@ from importance_sampling.samplers import ModelSampler, UniformSampler, \
     PowerSmoothingSampler, OnlineBatchSelectionSampler, HistorySampler, \
     CacheSampler, ConditionalStartSampler, WarmupCondition, ExpCondition, \
     TotalVariationCondition, VarianceReductionCondition, SCSGSampler, \
-    DynamicSampler
+    SBSampler
 from importance_sampling.utils import tf_config
 from importance_sampling.utils.functional import compose, partial, ___
 
@@ -259,6 +259,10 @@ def get_models_dictionary(hyperparams={}, reweighting=None):
             final_key = name_from_grid(items, prefix=k)
             wrappers[final_key] = partial(classes[k], **dict(items))
 
+    wrappers["sb"] = partial(
+        SBWrapper,
+        ___,
+        reweighting)
     wrappers["svrg"] = SVRGWrapper
     wrappers["katyusha"] = partial(
         KatyushaWrapper,
@@ -316,12 +320,12 @@ def get_samplers_dictionary(model, hyperparams={}, reweighting=None):
             model,
             large_batch=hyperparams.get("presample", 1024)
         ),
-        "dynamic": partial(
-            DynamicSampler,
+        "sb": partial(
+            SBSampler,
             ___,
             reweighting,
             model,
-            large_batch=hyperparams.get("presample", 1024)
+            batch_size=hyperparams.get("batch_size", 64)
         ),
         "lstm": partial(
             LSTMSampler,
