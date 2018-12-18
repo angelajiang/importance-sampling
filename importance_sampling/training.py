@@ -10,11 +10,12 @@ from keras.layers import Dropout, BatchNormalization
 import numpy as np
 from blinker import signal
 
-from .datasets import InMemoryDataset, GeneratorDataset
-from .model_wrappers import OracleWrapper, SVRGWrapper
+from .datasets import InMemoryDataset, InMemoryImageDataset, GeneratorDataset
+from .model_wrappers import OracleWrapper, SVRGWrapper, SBWrapper
 from .samplers import ConditionalStartSampler, VarianceReductionCondition, \
     AdaptiveAdditiveSmoothingSampler, AdditiveSmoothingSampler, ModelSampler, \
-    LSTMSampler, ConstantVarianceSampler, ConstantTimeSampler, SCSGSampler
+    LSTMSampler, ConstantVarianceSampler, ConstantTimeSampler, SCSGSampler, \
+    SBSampler
 from .reweighting import BiasedReweightingPolicy, NoReweightingPolicy
 from .utils.functional import ___, compose, partial
 
@@ -118,12 +119,12 @@ class _BaseImportanceTraining(object):
             x_test, y_test = np.empty(shape=(0, 1)), np.empty(shape=(0, 1))
 
         # Make the dataset to train on
-        dataset = InMemoryDataset(
+        dataset = InMemoryImageDataset(
             x_train,
             y_train,
             x_test,
             y_test,
-            categorical=False  # this means use the targets as is
+            categorical=True  # this means use the targets as is
         )
 
         return self.fit_dataset(
@@ -533,6 +534,34 @@ class ApproximateImportanceTraining(_BaseImportanceTraining):
     def fit_generator(*args, **kwargs):
         raise NotImplementedError("ApproximateImportanceTraining doesn't "
                                   "support generator training")
+
+class SB(_BaseImportanceTraining):
+    """Train a model with Selective-Backprop.
+
+    Arguments
+    ---------
+        model: The Keras model to train
+    """
+    def __init__(self, model):
+
+        super(SB, self).__init__(model, "loss", None)
+        self.model = SBWrapper(self.original_model, self.reweighting)
+
+    @property
+    def reweighting(self):
+        """SVRG does not currently use reweighting so return
+        NoReweightingPolicy()"""
+        return NoReweightingPolicy()
+
+    def sampler(self, dataset, batch_size, steps_per_epoch, epochs):
+        """Create the SB sampler"""
+        return SBSampler(
+            dataset,
+            self.reweighting,
+            self.model,
+            batch_size,
+            batch_size
+        )
 
 
 class SVRG(_BaseImportanceTraining):

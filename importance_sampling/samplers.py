@@ -4,12 +4,12 @@
 #
 
 from functools import partial
-
 from blinker import signal
 from keras.layers import Dense, Embedding, Flatten, Input, LSTM, Masking, \
     concatenate
 from keras.models import Model
 import numpy as np
+import utils.sb_utils as sb_utils
 
 
 def _get_dataset_length(dset, default=1):
@@ -87,6 +87,81 @@ class BaseSampler(object):
 
     def update(self, idxs, results):
         pass
+
+
+
+class SBSampler(BaseSampler):
+    """SBSampler uses a model to score the samples.
+    def __init__(self, dataset, reweighting, model, large_batch=None,
+                 forward_batch_size=128):
+        self.model = model
+        self.large_batch = large_batch
+        self.forward_batch_size = forward_batch_size
+    """
+    def __init__(self, dataset, reweighting, model, batch_size, forward_batch_size=128):
+        self.model = model
+        self.N = _get_dataset_length(dataset, default=1)
+        self.current_idx = 0
+        self.batch_size = batch_size
+        self.forward_batch_size = forward_batch_size
+
+        self.backprop_queue = []
+        self.scores_queue = []
+
+        self.dataset_batcher = sb_utils.DatasetBatcher(self.N, forward_batch_size)
+
+        super(SBSampler, self).__init__(dataset, reweighting)
+
+    def _get_samples_with_scores(self, batch_size):
+
+        # Sample a large number of points in random and score them
+        idxs = np.asarray(self.dataset_batcher.next())
+        x, y = self.dataset.train_data[idxs]
+        scores = self.model.score(x, y, batch_size=self.batch_size)
+
+        self.current_idx += len(idxs)
+
+        return (
+            idxs,
+            scores,
+            (x, y)
+        )
+
+    def _is_selected(self, score):
+        draw = np.random.uniform(0, 1)
+        return draw < score
+
+    def sample(self, batch_size):
+        # Get the importance scores of some samples
+
+        while len(self.backprop_queue) < batch_size:
+            idxs1, scores, xy = self._get_samples_with_scores(self.forward_batch_size)
+            selected_idxs = [i for i, score in enumerate(scores) if self._is_selected(score)]
+            print("Examples chosen: {}".format(len(selected_idxs)))
+            self.backprop_queue += idxs1[selected_idxs].tolist()
+            self.scores_queue += scores[selected_idxs].tolist()
+
+        backprop_batch = self.backprop_queue[:batch_size]
+        self.backprop_queue = self.backprop_queue[batch_size:]
+        scores_batch = self.scores_queue[:batch_size]
+        self.scores_queue = self.scores_queue[batch_size:]
+        selected_image_idxs = np.asarray(backprop_batch)
+        selected_scores = np.asarray(scores_batch)
+
+        assert(len(selected_image_idxs) == batch_size)
+        assert(len(selected_scores) == batch_size)
+        #print("Sampling {} examples".format(len(selected_image_idxs)))
+
+        # Use all the data, it's already sampled
+        idxs2 = np.asarray(range(len(selected_image_idxs)))
+        w = self.reweighting.sample_weights(idxs2, selected_scores)
+
+        # Get the data
+        xy = self.dataset.train_data[selected_image_idxs]
+
+        scores = selected_scores if scores is not None else np.ones(batch_size)
+        self._send_messages(selected_image_idxs, xy, w, scores)
+        return selected_image_idxs, xy, w
 
 
 class UniformSampler(BaseSampler):
