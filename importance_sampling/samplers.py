@@ -11,6 +11,8 @@ from keras.layers import Dense, Embedding, Flatten, Input, LSTM, Masking, \
 from keras.models import Model
 import numpy as np
 
+import utils.sb_utils as sb_utils
+
 
 def _get_dataset_length(dset, default=1):
     """Return the dataset's training data length and in case the dataset is
@@ -89,6 +91,7 @@ class BaseSampler(object):
         pass
 
 
+
 class SBSampler(BaseSampler):
     """SBSampler uses a model to score the samples.
     def __init__(self, dataset, reweighting, model, large_batch=None,
@@ -101,20 +104,24 @@ class SBSampler(BaseSampler):
         self.model = model
         self.N = _get_dataset_length(dataset, default=1)
         self.current_idx = 0
+        self.batch_size = batch_size
         self.forward_batch_size = forward_batch_size
+
         self.backprop_queue = []
         self.scores_queue = []
-        self.batch_size = batch_size
+
+        self.dataset_batcher = sb_utils.DatasetBatcher(self.N, forward_batch_size)
 
         super(SBSampler, self).__init__(dataset, reweighting)
 
     def _get_samples_with_scores(self, batch_size):
 
         # Sample a large number of points in random and score them
-        idxs = np.asarray(range(self.current_idx,
-                                self.current_idx + self.batch_size))
-        # TODO: Shuffle every epoch
-        idxs = np.asarray([idx % len(self.dataset.train_data) for idx in idxs])
+        #idxs = np.asarray(range(self.current_idx,
+        #                        self.current_idx + self.batch_size))
+        #idxs = np.random.choice(self.N, batch_size)
+        #idxs = np.asarray([idx % len(self.dataset.train_data) for idx in idxs])
+        idxs = np.asarray(self.dataset_batcher.next())
         x, y = self.dataset.train_data[idxs]
         scores = self.model.score(x, y, batch_size=self.batch_size)
 
