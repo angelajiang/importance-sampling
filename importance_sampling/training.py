@@ -10,7 +10,7 @@ from keras.layers import Dropout, BatchNormalization
 import numpy as np
 from blinker import signal
 
-from .datasets import InMemoryDataset, GeneratorDataset
+from .datasets import InMemoryDataset, InMemoryImageDataset, GeneratorDataset
 from .model_wrappers import OracleWrapper, SVRGWrapper, SBWrapper
 from .samplers import ConditionalStartSampler, VarianceReductionCondition, \
     AdaptiveAdditiveSmoothingSampler, AdditiveSmoothingSampler, ModelSampler, \
@@ -67,13 +67,13 @@ class _BaseImportanceTraining(object):
         using importance sampling."""
         raise NotImplementedError()
 
-    #def sampler(self, dataset, batch_size, steps_per_epoch, epochs):
-    #    """Create a new sampler to sample from the given dataset using
-    #    importance sampling."""
-    #    raise NotImplementedError()
+    def sampler(self, dataset, batch_size, steps_per_epoch, epochs):
+        """Create a new sampler to sample from the given dataset using
+        importance sampling."""
+        raise NotImplementedError()
 
     def fit(self, x, y, batch_size=32, epochs=1, verbose=1, callbacks=None,
-            validation_split=0.0, samplery=None, validation_data=None, steps_per_epoch=None,
+            validation_split=0.0, validation_data=None, steps_per_epoch=None,
             on_sample=None, on_scores=None):
         """Create an `InMemoryDataset` instance with the given data and train
         the model using importance sampling for a given number of epochs.
@@ -119,12 +119,12 @@ class _BaseImportanceTraining(object):
             x_test, y_test = np.empty(shape=(0, 1)), np.empty(shape=(0, 1))
 
         # Make the dataset to train on
-        dataset = InMemoryDataset(
+        dataset = InMemoryImageDataset(
             x_train,
             y_train,
             x_test,
             y_test,
-            categorical=False  # this means use the targets as is
+            categorical=True  # this means use the targets as is
         )
 
         return self.fit_dataset(
@@ -135,8 +135,7 @@ class _BaseImportanceTraining(object):
             verbose=verbose,
             callbacks=callbacks,
             on_sample=on_sample,
-            on_scores=on_scores,
-            sampler=samplery
+            on_scores=on_scores
         )
 
     def fit_generator(self, train, steps_per_epoch, batch_size=32,
@@ -193,7 +192,7 @@ class _BaseImportanceTraining(object):
 
     def fit_dataset(self, dataset, steps_per_epoch=None, batch_size=32,
                     epochs=1, verbose=1, callbacks=None, on_sample=None,
-                    on_scores=None, sampler=None):
+                    on_scores=None):
         """Train the model on the given dataset for a given number of epochs.
 
         Arguments
@@ -242,7 +241,7 @@ class _BaseImportanceTraining(object):
         })
 
         # Create the sampler
-        #sampler = self.sampler(dataset, batch_size, steps_per_epoch, epochs)
+        sampler = self.sampler(dataset, batch_size, steps_per_epoch, epochs)
 
         # Start the training loop
         epoch = 0
@@ -544,8 +543,9 @@ class SB(_BaseImportanceTraining):
         model: The Keras model to train
     """
     def __init__(self, model):
-        self.original_model = model
-        self.model = SBWrapper(model, self.reweighting)
+
+        super(SB, self).__init__(model, "loss", None)
+        self.model = SBWrapper(self.original_model, self.reweighting)
 
     @property
     def reweighting(self):
