@@ -54,13 +54,13 @@ model.compile(
     metrics=["accuracy"]
 )
 
+y_val_categorical = keras.utils.to_categorical(y_val, num_classes)
+
 SB(model).fit(
     x_train, y_train,
     batch_size=128,
-    epochs=50,
+    epochs=150,
     verbose=2,
     validation_data=(x_val, y_val)
 )
-
-y_val_categorical = keras.utils.to_categorical(y_val, num_classes)
 model.evaluate(x_val, y_val_categorical)
