@@ -115,7 +115,8 @@ class SBSampler(BaseSampler):
     def _get_samples_with_scores(self, batch_size):
 
         # Sample a large number of points in random and score them
-        idxs = np.asarray(self.dataset_batcher.next())
+        #idxs = np.asarray(self.dataset_batcher.next())
+        idxs = np.random.choice(self.N, self.batch_size)
         x, y = self.dataset.train_data[idxs]
         scores = self.model.score(x, y, batch_size=self.batch_size)
 
