@@ -74,7 +74,7 @@ def ResNet50(weights="imagenet", input_shape=(224, 224, 3), output_size=1000,
     x = block(x, 3, [512, 512, 2048], 1, 5, "b")
     x = block(x, 3, [512, 512, 2048], 1, 5, "c")
 
-    x = AveragePooling2D((7, 7), name="avg_pool")(x)
+    x = AveragePooling2D((1, 1), name="avg_pool")(x)
     x = Flatten()(x)
     x = Dense(output_size, name="fc"+str(output_size))(x)
     if softmax:

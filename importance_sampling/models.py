@@ -8,6 +8,7 @@ from keras.layers import    \
     Activation,             \
     AveragePooling2D,       \
     BatchNormalization,     \
+    Conv2D,                 \
     Convolution2D,          \
     Dense,                  \
     Dropout,                \
@@ -29,6 +30,7 @@ from keras.regularizers import l2
 from .layers import       \
     BatchRenormalization, \
     LayerNormalization,   \
+    StatsBatchNorm,   \
     TripletLossLayer
 from .pretrained import ResNet50, DenseNet121
 from .utils.functional import partial
@@ -389,6 +391,73 @@ def build_small_cnn_squared(input_shape, output_size):
     return model
 
 
+def resnet_50(input_shape=(224, 224, 3), output_size=100,
+              weights=None, softmax=False, norm_layer=StatsBatchNorm):
+
+    def block(x_in, kernel, filters, strides, stage, block, shortcut=False):
+        conv_name = "res" + str(stage) + block + "_branch"
+        bn_name = "bn" + str(stage) + block + "_branch"
+
+        x = Conv2D(filters[0], 1, strides=strides, name=conv_name+"2a")(x_in)
+        x = norm_layer(name=bn_name+"2a")(x)
+        x = Activation("relu")(x)
+        x = Conv2D(filters[1], kernel, padding="same", name=conv_name+"2b")(x)
+        x = norm_layer(name=bn_name+"2b")(x)
+        x = Activation("relu")(x)
+        x = Conv2D(filters[2], 1, name=conv_name+"2c")(x)
+        x = norm_layer(name=bn_name+"2c")(x)
+
+        if shortcut:
+            s = Conv2D(filters[2], 1, strides=strides, name=conv_name+"1")(x_in)
+            s = norm_layer(name=bn_name+"1")(s)
+        else:
+            s = x_in
+
+        return Activation("relu")(add([x, s]))
+
+    x_in = Input(shape=input_shape)
+    x = Conv2D(64, 7, strides=2, padding="same", name="conv1")(x_in)
+    x = norm_layer(name="bn_conv1")(x)
+    x = Activation("relu")(x)
+    x = MaxPooling2D((3, 3), strides=(2, 2))(x)
+
+    x = block(x, 3, [64, 64, 256], 1, 2, "a", shortcut=True)
+    x = block(x, 3, [64, 64, 256], 1, 2, "b")
+    x = block(x, 3, [64, 64, 256], 1, 2, "c")
+
+    x = block(x, 3, [128, 128, 512], 2, 3, "a", shortcut=True)
+    x = block(x, 3, [128, 128, 512], 1, 3, "b")
+    x = block(x, 3, [128, 128, 512], 1, 3, "c")
+    x = block(x, 3, [128, 128, 512], 1, 3, "d")
+
+    x = block(x, 3, [256, 256, 1024], 2, 4, "a", shortcut=True)
+    x = block(x, 3, [256, 256, 1024], 1, 4, "b")
+    x = block(x, 3, [256, 256, 1024], 1, 4, "c")
+    x = block(x, 3, [256, 256, 1024], 1, 4, "d")
+    x = block(x, 3, [256, 256, 1024], 1, 4, "e")
+    x = block(x, 3, [256, 256, 1024], 1, 4, "f")
+
+    x = block(x, 3, [512, 512, 2048], 2, 5, "a", shortcut=True)
+    x = block(x, 3, [512, 512, 2048], 1, 5, "b")
+    x = block(x, 3, [512, 512, 2048], 1, 5, "c")
+
+    x = AveragePooling2D((1, 1), name="avg_pool")(x)
+    x = Flatten()(x)
+    x = Dense(output_size, name="fc"+str(output_size))(x)
+    if softmax:
+        x = Activation("softmax")(x)
+
+    model = Model(x_in, x, name="resnet50")
+
+    model.compile(
+        loss="categorical_crossentropy",
+        optimizer="adam",
+        metrics=["accuracy"]
+    )
+
+    return model
+
+
 def wide_resnet(L, k, drop_rate=0.0):
     """Implement the WRN-L-k from 'Wide Residual Networks' BMVC 2016"""
     def wide_resnet_impl(input_shape, output_size):
@@ -534,6 +603,8 @@ def get(name):
         "wide_resnet_28_2": wide_resnet(28, 2),
         "wide_resnet_28_10": wide_resnet(28, 10),
         "wide_resnet_28_10_dropout": wide_resnet(28, 10, 0.3),
+        "wide_resnet_28_10_dropout": wide_resnet(28, 10, 0.3),
+        "resnet_50": partial(resnet_50, softmax=True),
         "pretrained_resnet50": pretrained(partial(ResNet50, softmax=True)),
         "triplet_pre_resnet50": triplet(pretrained(ResNet50)),
         "pretrained_densenet121": pretrained(DenseNet121),

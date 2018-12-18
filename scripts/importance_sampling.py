@@ -272,10 +272,12 @@ def get_models_dictionary(hyperparams={}, reweighting=None):
 
 def build_model(model, wrapper, dataset, hyperparams, reweighting):
     def build_optimizer(opt, hyperparams):
+        print("Optimizer:", opt)
         return {
             "sgd": SGD(
                 lr=hyperparams.get("lr", 0.001),
                 momentum=hyperparams.get("momentum", 0.0),
+                decay=hyperparams.get("lr_decay", 0.0005),
                 nesterov=hyperparams.get("nesterov", False),
                 clipnorm=hyperparams.get("clipnorm", None)
             ),
@@ -568,7 +570,7 @@ def main(argv):
             "small_nn", "small_cnn", "cnn", "elu_cnn", "lstm_lm", "lstm_lm2",
             "lstm_lm3", "small_cnn_sq", "wide_resnet_16_4", "wide_resnet_28_10",
             "wide_resnet_28_2", "wide_resnet_16_4_dropout",
-            "wide_resnet_28_10_dropout", "lstm_timit", "pretrained_resnet50",
+            "wide_resnet_28_10_dropout", "resnet_50", "lstm_timit", "pretrained_resnet50",
             "triplet_pre_densenet121", "pretrained_densenet121",
             "triplet_pre_resnet50", "face_pre_resnet50", "lstm_mnist",
             "svrg_nn"
@@ -767,6 +769,7 @@ def main(argv):
         clock.write()
         # Compute the validation score if we have to
         if should_validate():
+            print(b * len(idxs))
             evaluation_progress.save_test()
             model.evaluate(*dataset.test_data[:])
             if args.save_train_scores:

@@ -109,7 +109,6 @@ class DynamicSampler(BaseSampler):
         idxs = np.asarray(range(self.current_idx,
                                 self.current_idx + batch_size))
         idxs = np.asarray([idx % len(self.dataset.train_data) for idx in idxs])
-        print("_get_samples_with_scores", len(idxs))
         x, y = self.dataset.train_data[idxs]
         #scores = self.model.score(x, y, batch_size=self.forward_batch_size)
 
