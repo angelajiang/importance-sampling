@@ -15,7 +15,7 @@ from keras.layers.convolutional import Conv2D
 from keras.layers.convolutional import MaxPooling2D
 from keras.layers.normalization import BatchNormalization
 
-def base_model(num_classes):
+def base_model(num_classes, x_train):
 
     model = Sequential()
     model.add(Conv2D(32, (3, 3), padding='same', input_shape=x_train.shape[1:]))
@@ -43,9 +43,24 @@ def base_model(num_classes):
 
     return model
 
+def build_small_nn(input_shape, output_size):
+    model = Sequential([
+        Dense(40, activation="tanh", input_shape=input_shape),
+        Dense(40, activation="tanh"),
+        Dense(output_size),
+        Activation("softmax")
+    ])
+
+    model.compile(
+        loss="categorical_crossentropy",
+        optimizer="adam",
+        metrics=["accuracy"]
+    )
+
+    return model
 
 (x_train, y_train), (x_val, y_val) = cifar10.load_data()
-model = base_model(10)
+model = base_model(10, x_train)
 model.compile(
     optimizer="adam",
     loss="categorical_crossentropy",
@@ -56,7 +71,7 @@ SB(model).fit(
     x_train, y_train,
     batch_size=128,
     epochs=10,
-    verbose=1,
+    verbose=2,
     validation_data=(x_val, y_val)
 )
 
