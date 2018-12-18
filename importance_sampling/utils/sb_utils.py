@@ -24,7 +24,7 @@ class DatasetBatcher():
             # Special case: Epoch completed. Shuffle data before sampling
             next_batch = self.dataset_idxs[self.current_pos:]
             shuffle(self.dataset_idxs)
-            remaining_batch_size = forward_batch_size - len(next_batch)
+            remaining_batch_size = self.forward_batch_size - len(next_batch)
             next_batch += self.dataset_idxs[:remaining_batch_size]
             self.current_pos = remaining_batch_size
 

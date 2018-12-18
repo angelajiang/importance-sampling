@@ -156,7 +156,8 @@ class SBSampler(BaseSampler):
 
         assert(len(selected_image_idxs) == batch_size)
         assert(len(selected_scores) == batch_size)
-        print("Sampling {} examples".format(len(selected_image_idxs)))
+        #print("Sampling {} examples".format(len(selected_image_idxs)))
+        #print(selected_scores)
 
         # Use all the data, it's already sampled
         idxs2 = np.asarray(range(len(selected_image_idxs)))

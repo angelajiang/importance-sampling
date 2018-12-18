@@ -199,6 +199,7 @@ class SBWrapper(ModelWrapper):
             return None
 
     def _augment_model(self, model, score, reweighting):
+
         # Extract some info from the model
 
 	def euclidean_distance_loss(y_true, y_pred):
@@ -222,6 +223,7 @@ class SBWrapper(ModelWrapper):
 
         # Create a loss layer and a score layer
         loss_tensor = LossLayer(loss)([y_true, model.get_output_at(0)])
+
         score_tensor = _get_scoring_layer(
             score,
             y_true,
