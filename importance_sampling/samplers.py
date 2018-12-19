@@ -115,8 +115,8 @@ class SBSampler(BaseSampler):
     def _get_samples_with_scores(self, batch_size):
 
         # Sample a large number of points in random and score them
-        #idxs = np.asarray(self.dataset_batcher.next())
-        idxs = np.random.choice(self.N, self.batch_size)
+        idxs = np.asarray(self.dataset_batcher.next())
+        #idxs = np.random.choice(self.N, self.batch_size)
         x, y = self.dataset.train_data[idxs]
         scores = self.model.score(x, y, batch_size=self.batch_size)
 
@@ -138,7 +138,7 @@ class SBSampler(BaseSampler):
         while len(self.backprop_queue) < batch_size:
             idxs1, scores, xy = self._get_samples_with_scores(self.forward_batch_size)
             selected_idxs = [i for i, score in enumerate(scores) if self._is_selected(score)]
-            print("Examples chosen: {}".format(len(selected_idxs)))
+            print("num_chosen {}".format(len(selected_idxs)))
             self.backprop_queue += idxs1[selected_idxs].tolist()
             self.scores_queue += scores[selected_idxs].tolist()
 
