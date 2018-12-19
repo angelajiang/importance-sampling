@@ -128,8 +128,9 @@ class SBSampler(BaseSampler):
             (x, y)
         )
 
-    def _is_selected(self, score):
+    def _is_selected(self, score, sampling_min = 0.1):
         draw = np.random.uniform(0, 1)
+        score = max(0.1, score)
         return draw < score
 
     def sample(self, batch_size):
