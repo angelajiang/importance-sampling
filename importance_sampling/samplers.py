@@ -157,8 +157,8 @@ class SBSampler(BaseSampler):
         #print("Sampling {} examples".format(len(selected_image_idxs)))
 
         # Use all the data, it's already sampled
-        idxs2 = np.asarray(range(len(selected_image_idxs)))
-        w = self.reweighting.sample_weights(idxs2, selected_scores)
+        #idxs2 = np.asarray(range(len(selected_image_idxs)))
+        w = self.reweighting.sample_weights(selected_image_idxs, selected_scores)
 
         # Get the data
         xy = self.dataset.train_data[selected_image_idxs]
@@ -216,6 +216,10 @@ class UniformSampler(BaseSampler):
         # Basically if we don't know the length the indices don't matter so
         # sample batch_size 0s.
         self.idxs = np.arange(_get_dataset_length(self.dataset, default=1))
+
+        print(self.dataset.train_data[[0]])
+        print(self.dataset.train_data[[1]])
+        print(len(self.idxs))
 
     def _get_samples_with_scores(self, batch_size):
         return (
