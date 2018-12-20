@@ -135,15 +135,12 @@ class SBSampler(BaseSampler):
         score = max(sampling_min, score)
         return draw < score
 
-    def sample(self, batch_size, b):
+    def sample(self, batch_size):
         # Get the importance scores of some samples
 
         while len(self.backprop_queue) < batch_size:
             idxs1, scores, xy = self._get_samples_with_scores(self.forward_batch_size)
-            if b < self.N / float(batch_size):
-                selected_idxs = [i for i, score in enumerate(scores) if self._is_selected(score, sampling_min=1)]
-            else:
-                selected_idxs = [i for i, score in enumerate(scores) if self._is_selected(score)]
+            selected_idxs = [i for i, score in enumerate(scores) if self._is_selected(score)]
             print("num_chosen {}".format(len(selected_idxs)))
             self.backprop_queue += idxs1[selected_idxs].tolist()
             self.scores_queue += scores[selected_idxs].tolist()
