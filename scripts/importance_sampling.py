@@ -774,7 +774,7 @@ def main(argv):
     # Start training
     should_validate = every_nth(args.validate_every)
     should_snapshot = every_nth(args.snapshot_period)
-    should_save_idxs = every_nth(2)
+    should_save_idxs = every_nth(391)
     clock = WallClock(path.join(args.output_directory, "clock.txt"))
     # Main training loop
     time_based = args.hyperparams.get("time_based", 0)

@@ -157,7 +157,6 @@ class SBSampler(BaseSampler):
         #print("Sampling {} examples".format(len(selected_image_idxs)))
 
         # Use all the data, it's already sampled
-        #idxs2 = np.asarray(range(len(selected_image_idxs)))
         w = self.reweighting.sample_weights(selected_image_idxs, selected_scores)
 
         # Get the data

@@ -10,7 +10,7 @@ mkdir $OUTPUT_DIR
 git rev-parse HEAD &> $OUTPUT_DIR/sha
 
 python -u importance_sampling.py \
-  resnet_50 \
+  wide_resnet_28_2 \
   oracle-gnorm \
   model \
   predicted \
