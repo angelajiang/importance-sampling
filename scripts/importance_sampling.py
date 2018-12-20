@@ -791,7 +791,12 @@ def main(argv):
             sys.stderr.write("Setting lr: %f\n" % (new_lr,))
             sys.stderr.flush()
         # Sample some points with their respective weights
-        idxs, (x, y), w = sampler.sample(batch_size)
+        # TODO: Remove this hack!
+        if args.sampler == "sb":
+            idxs, (x, y), w = sampler.sample(batch_size, b)
+        else:
+            idxs, (x, y), w = sampler.sample(batch_size)
+
         # Train on the sampled points
         losses, metrics, scores = model.train_batch(x, y, w)
         # Update the sampler
