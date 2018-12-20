@@ -17,6 +17,6 @@ python -u importance_sampling.py \
   cifar10 \
   $OUTPUT_DIR \
   --save_idxs_hist \
-  --hyperparams 'batch_size=i128;forward_batch_size=i128;lr=f0.1;momentum=f0.9;opt=ssgd;lr_changes=I58593!97656;lr_targets=F0.02!0.004' \
-  --train_for 136718 \
+  --hyperparams 'batch_size=i128;forward_batch_size=i128;lr=f0.1;momentum=f0.9;opt=ssgd;lr_changes=I20000!40000;lr_targets=F0.02!0.004' \
+  --train_for 50000 \
   --validate_every 100 | tee $OUTPUT_DIR"/selectivity.txt"
