@@ -29,6 +29,8 @@ class BaseSampler(object):
     def __init__(self, dataset, reweighting):
         self.dataset = dataset
         self.reweighting = reweighting
+        keys = range(len(dataset._x_train))
+        self.idxs_hist = dict(zip(keys, [0] * len(keys)))
 
     def _slice_data(self, x, y, idxs):
         if isinstance(x, (list, tuple)):
@@ -51,7 +53,7 @@ class BaseSampler(object):
         ---------
         batch_size: int
                     Return at least that many samples
-        
+
         Return
         ------
         idxs: array
@@ -130,7 +132,7 @@ class SBSampler(BaseSampler):
 
     def _is_selected(self, score, sampling_min = 0.1):
         draw = np.random.uniform(0, 1)
-        score = max(0.1, score)
+        score = max(sampling_min, score)
         return draw < score
 
     def sample(self, batch_size):
@@ -166,6 +168,11 @@ class SBSampler(BaseSampler):
         return selected_image_idxs, xy, w
 
 
+    def update(self, idxs, x):
+        for i in idxs:
+            self.idxs_hist[i] += 1
+
+
 class UniformSampler(BaseSampler):
     """UniformSampler is the simplest possible sampler which samples the
     dataset uniformly."""
@@ -181,6 +188,10 @@ class UniformSampler(BaseSampler):
             None,
             None
         )
+
+    def update(self, idxs, x):
+        for i in idxs:
+            self.idxs_hist[i] += 1
 
 
 class ModelSampler(BaseSampler):
@@ -212,6 +223,10 @@ class ModelSampler(BaseSampler):
             scores,
             (x, y)
         )
+
+    def update(self, idxs, x):
+        for i in idxs:
+            self.idxs_hist[i] += 1
 
 
 class CacheSampler(BaseSampler):

@@ -11,6 +11,7 @@ import argparse
 from bisect import bisect_right
 from contextlib import contextmanager
 from itertools import product
+import pickle
 import os
 from os import path
 import time
@@ -481,6 +482,22 @@ class PredictionLogger(object):
         self.fd.flush()
 
 
+class IdxsHistLogger(object):
+    """Write idxs to file"""
+    def __init__(self, output_directory):
+        subdir = os.path.join(output_directory, "idxs")
+        if not os.path.exists(subdir):
+            os.makedirs(subdir)
+        self.fileprefix = path.join(subdir, "idxs_hist")
+
+    def write(self, idxs, batch_idx):
+        with open(self.fileprefix+".pickle", "wb") as handle:
+            pickle.dump(idxs, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        with open(self.fileprefix+"_{}.pickle".format(batch_idx), "wb") as handle:
+            pickle.dump(idxs, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
 class EvaluationLogger(object):
     """Log the results of the evaluation during training"""
     def __init__(self, output_directory, test, test_scores,
@@ -668,6 +685,11 @@ def main(argv):
         "--initial_weights",
         help="Initialize the model to those weights"
     )
+    parser.add_argument(
+        "--save_idxs_hist",
+        action="store_true",
+        help="Save the idxs chosen over time"
+    )
 
     args = parser.parse_args(argv)
 
@@ -727,6 +749,10 @@ def main(argv):
         args.output_directory,
         "predictions.txt"
     )
+    idxs_hist_logger = IdxsHistLogger(
+        args.output_directory
+    )
+
     signal("is.training").connect(training_progress)
     signal("is.evaluation").connect(evaluation_progress.on_evaluate)
     signal("is.lstm_comparison_sampler.scores").connect(comparison_logger)
@@ -743,6 +769,7 @@ def main(argv):
     # Start training
     should_validate = every_nth(args.validate_every)
     should_snapshot = every_nth(args.snapshot_period)
+    should_save_idxs = every_nth(391)
     clock = WallClock(path.join(args.output_directory, "clock.txt"))
     # Main training loop
     time_based = args.hyperparams.get("time_based", 0)
@@ -779,6 +806,8 @@ def main(argv):
             if args.save_train_scores:
                 evaluation_progress.save_train()
                 model.evaluate(*dataset.train_data[train_idxs])
+        if args.save_idxs_hist and should_save_idxs():
+            idxs_hist_logger.write(sampler.idxs_hist, b)
         # Save the model weights
         if args.save_model and should_snapshot():
             model.model.save_weights(
