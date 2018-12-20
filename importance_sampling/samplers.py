@@ -174,8 +174,8 @@ class SBSampler(BaseSampler):
 
 
 class SequentialUniformSampler(BaseSampler):
-    """UniformSampler is the simplest possible sampler which samples the
-    dataset uniformly."""
+    """SequentialUniformSampler is a uniform sampler that traverses over the 
+    entire dataset each epoch"""
     def __init__(self, dataset, reweighting, batch_size):
         super(SequentialUniformSampler, self).__init__(dataset, reweighting)
 
@@ -192,6 +192,20 @@ class SequentialUniformSampler(BaseSampler):
     def update(self, idxs, x):
         for i in idxs:
             self.idxs_hist[i] += 1
+
+    def sample(self, batch_size):
+        # Get the importance scores of some samples
+        idxs, scores, xy = self._get_samples_with_scores(batch_size)
+
+        # Sample from the available ones
+        w = self.reweighting.sample_weights(idxs, scores)
+
+        # Make sure we have the data
+        xy = self.dataset.train_data[idxs]
+
+        scores = scores[idxs] if scores is not None else np.ones(batch_size)
+        self._send_messages(idxs, xy, w, scores)
+        return idxs, xy, w
 
 
 class UniformSampler(BaseSampler):
