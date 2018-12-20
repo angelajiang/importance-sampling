@@ -110,15 +110,15 @@ class SBSampler(BaseSampler):
         self.backprop_queue = []
         self.scores_queue = []
 
-        #self.dataset_batcher = sb_utils.DatasetBatcher(self.N, forward_batch_size)
+        self.dataset_batcher = sb_utils.DatasetBatcher(self.N, forward_batch_size)
 
         super(SBSampler, self).__init__(dataset, reweighting)
 
     def _get_samples_with_scores(self, batch_size):
 
         # Sample a large number of points in random and score them
-        #idxs = np.asarray(self.dataset_batcher.next())
-        idxs = np.random.choice(self.N, self.batch_size)
+        idxs = np.asarray(self.dataset_batcher.next())
+        #idxs = np.random.choice(self.N, self.batch_size)
         x, y = self.dataset.train_data[idxs]
         scores = self.model.score(x, y, batch_size=self.batch_size)
 
