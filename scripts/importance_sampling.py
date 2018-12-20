@@ -32,7 +32,7 @@ from importance_sampling.reweighting import AdjustedBiasedReweightingPolicy, \
 from importance_sampling.model_wrappers import OracleWrapper, SBWrapper, SVRGWrapper, \
     KatyushaWrapper
 from importance_sampling.samplers import ModelSampler, UniformSampler, \
-    LSTMSampler, PerClassGaussian, LSTMComparisonSampler, \
+    LSTMSampler, PerClassGaussian, LSTMComparisonSampler, SequentialUniformSampler, \
     AdditiveSmoothingSampler, AdaptiveAdditiveSmoothingSampler, \
     PowerSmoothingSampler, OnlineBatchSelectionSampler, HistorySampler, \
     CacheSampler, ConditionalStartSampler, WarmupCondition, ExpCondition, \
@@ -313,6 +313,11 @@ def build_model(model, wrapper, dataset, hyperparams, reweighting):
 def get_samplers_dictionary(model, hyperparams={}, reweighting=None):
     # Add some base samplers
     samplers = {
+        "sequential": partial(SequentialUniformSampler,
+                              ___, 
+                              reweighting,
+                              batch_size=hyperparams.get("batch_size", 64)
+                              ),
         "uniform": partial(UniformSampler, ___, reweighting),
         "model": partial(
             ModelSampler,

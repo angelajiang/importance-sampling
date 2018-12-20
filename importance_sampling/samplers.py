@@ -176,6 +176,27 @@ class SBSampler(BaseSampler):
             self.idxs_hist[i] += 1
 
 
+class SequentialUniformSampler(BaseSampler):
+    """UniformSampler is the simplest possible sampler which samples the
+    dataset uniformly."""
+    def __init__(self, dataset, reweighting, batch_size):
+        super(SequentialUniformSampler, self).__init__(dataset, reweighting)
+
+        self.N = _get_dataset_length(dataset, default=1)
+        self.dataset_batcher = sb_utils.DatasetBatcher(self.N, batch_size)
+
+    def _get_samples_with_scores(self, batch_size):
+        return (
+            np.asarray(self.dataset_batcher.next()),
+            None,
+            None
+        )
+
+    def update(self, idxs, x):
+        for i in idxs:
+            self.idxs_hist[i] += 1
+
+
 class UniformSampler(BaseSampler):
     """UniformSampler is the simplest possible sampler which samples the
     dataset uniformly."""
