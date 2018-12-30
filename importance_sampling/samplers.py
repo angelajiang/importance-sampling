@@ -29,7 +29,7 @@ class BaseSampler(object):
     def __init__(self, dataset, reweighting):
         self.dataset = dataset
         self.reweighting = reweighting
-        keys = range(len(dataset._x_train))
+        keys = range(dataset.N)
         self.idxs_hist = dict(zip(keys, [0] * len(keys)))
 
     def _slice_data(self, x, y, idxs):
@@ -157,8 +157,7 @@ class SBSampler(BaseSampler):
         #print("Sampling {} examples".format(len(selected_image_idxs)))
 
         # Use all the data, it's already sampled
-        idxs2 = np.asarray(range(len(selected_image_idxs)))
-        w = self.reweighting.sample_weights(idxs2, selected_scores)
+        w = self.reweighting.sample_weights(selected_image_idxs, selected_scores)
 
         # Get the data
         xy = self.dataset.train_data[selected_image_idxs]
@@ -174,8 +173,8 @@ class SBSampler(BaseSampler):
 
 
 class SequentialUniformSampler(BaseSampler):
-    """UniformSampler is the simplest possible sampler which samples the
-    dataset uniformly."""
+    """SequentialUniformSampler is a uniform sampler that traverses over the 
+    entire dataset each epoch"""
     def __init__(self, dataset, reweighting, batch_size):
         super(SequentialUniformSampler, self).__init__(dataset, reweighting)
 
@@ -193,6 +192,20 @@ class SequentialUniformSampler(BaseSampler):
         for i in idxs:
             self.idxs_hist[i] += 1
 
+    def sample(self, batch_size):
+        # Get the importance scores of some samples
+        idxs, scores, xy = self._get_samples_with_scores(batch_size)
+
+        # Sample from the available ones
+        w = self.reweighting.sample_weights(idxs, scores)
+
+        # Make sure we have the data
+        xy = self.dataset.train_data[idxs]
+
+        scores = scores[idxs] if scores is not None else np.ones(batch_size)
+        self._send_messages(idxs, xy, w, scores)
+        return idxs, xy, w
+
 
 class UniformSampler(BaseSampler):
     """UniformSampler is the simplest possible sampler which samples the
@@ -202,6 +215,10 @@ class UniformSampler(BaseSampler):
         # Basically if we don't know the length the indices don't matter so
         # sample batch_size 0s.
         self.idxs = np.arange(_get_dataset_length(self.dataset, default=1))
+
+        print(self.dataset.train_data[[0]])
+        print(self.dataset.train_data[[1]])
+        print(len(self.idxs))
 
     def _get_samples_with_scores(self, batch_size):
         return (
